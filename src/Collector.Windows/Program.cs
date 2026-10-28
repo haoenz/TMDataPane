@@ -1,8 +1,8 @@
 using System.IO.MemoryMappedFiles;
 using System.Text;
 using System.Text.Json;
-using UsageBridge.Core;
-namespace UsageBridge;
+using DataPane.Core;
+namespace DataPane;
 
 internal static class Program
 {

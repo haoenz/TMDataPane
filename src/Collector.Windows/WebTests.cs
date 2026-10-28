@@ -1,6 +1,6 @@
 using System.Text.Json;
-using UsageBridge.Core;
-namespace UsageBridge;
+using DataPane.Core;
+namespace DataPane;
 
 internal static class WebTests
 {
@@ -31,7 +31,7 @@ internal static class WebTests
         </script>
         """);
         using var web = new WebExtractor(root, fixture);
-        var source = new Source { Id = "test", Kind = "browser_dom", Url = "https://usagebridge.test/index.html", TimeoutSeconds = 20,
+        var source = new Source { Id = "test", Kind = "browser_dom", Url = "https://datapane.test/index.html", TimeoutSeconds = 20,
             Fields = [new() { Name = "value", Path = "#balance", Steps = [new(), new() { Kind = "replace", Pattern = ",", Replacement = "" }] },
                 new() { Name = "control", Path = "#control", Attribute = "value" }, new() { Name = "session", Path = "#session" }] };
         var htmlSource = new Source { Kind = "http_html", Fields = [new() { Name = "value", Path = "b.price", Steps = [new()] }] };

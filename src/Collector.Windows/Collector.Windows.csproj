@@ -5,8 +5,9 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>UsageBridge.Collector</AssemblyName>
-    <Version>0.3.7</Version>
+    <AssemblyName>DataPane.Collector</AssemblyName>
+    <Version>0.4.0</Version>
+    <RootNamespace>DataPane</RootNamespace>
     <AssemblyTitle>DataPane Collector</AssemblyTitle>
     <Product>DataPane</Product>
     <PlatformTarget>x64</PlatformTarget>

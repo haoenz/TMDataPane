@@ -7,7 +7,7 @@ function Copy-DirectoryTree([string]$Source, [string]$Destination) {
     if ($copyExitCode -ge 8) { throw "Copy failed (robocopy exit $copyExitCode): $Source -> $Destination" }
 }
 if (!$PackageDirectory) {
-    if (Test-Path "$PSScriptRoot/plugins/UsageBridge.dll") { $PackageDirectory = $PSScriptRoot }
+    if (Test-Path "$PSScriptRoot/plugins/DataPane.dll") { $PackageDirectory = $PSScriptRoot }
     else { $PackageDirectory = (Get-Content "$(Split-Path $PSScriptRoot -Parent)/dist/latest-package.txt" -Raw).Trim() }
 }
 $TrafficMonitorDirectory = [IO.Path]::GetFullPath($TrafficMonitorDirectory)
@@ -17,12 +17,12 @@ $bytes = [IO.File]::ReadAllBytes($exe)
 $offset = [BitConverter]::ToInt32($bytes, 60)
 if ([BitConverter]::ToUInt16($bytes, $offset+4) -ne 0x8664) { throw 'This package requires x64 TrafficMonitor' }
 if (@(Get-Process TrafficMonitor -ErrorAction SilentlyContinue).Count) { throw 'Please exit TrafficMonitor before installing. The script will not stop it.' }
-if (!(Test-Path "$PackageDirectory/plugins/UsageBridge.dll")) { throw 'Package DLL not found' }
-if (!(Test-Path "$PackageDirectory/plugins/UsageBridge/UsageBridge.Collector.exe")) { throw 'Package collector not found' }
+if (!(Test-Path "$PackageDirectory/plugins/DataPane.dll")) { throw 'Package DLL not found' }
+if (!(Test-Path "$PackageDirectory/plugins/DataPane/DataPane.Collector.exe")) { throw 'Package collector not found' }
 if (!(Test-Path "$PackageDirectory/licenses")) { throw 'Package licenses not found' }
 $plugins = Join-Path $TrafficMonitorDirectory 'plugins'
-$backup = Join-Path $TrafficMonitorDirectory ('UsageBridge-backup-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0,8))
-foreach ($name in @('UsageBridge.dll','UsageBridge')) {
+$backup = Join-Path $TrafficMonitorDirectory ('DataPane-backup-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0,8))
+foreach ($name in @('DataPane.dll','DataPane')) {
     $existing = Join-Path $plugins $name
     if (Test-Path -LiteralPath $existing) {
         New-Item -ItemType Directory -Force $backup | Out-Null
@@ -34,8 +34,8 @@ foreach ($name in @('UsageBridge.dll','UsageBridge')) {
     }
 }
 New-Item -ItemType Directory -Force $plugins | Out-Null
-Copy-Item "$PackageDirectory/plugins/UsageBridge.dll" $plugins -Force
-Copy-DirectoryTree "$PackageDirectory/plugins/UsageBridge" "$plugins/UsageBridge"
-Copy-DirectoryTree "$PackageDirectory/licenses" "$plugins/UsageBridge/licenses"
+Copy-Item "$PackageDirectory/plugins/DataPane.dll" $plugins -Force
+Copy-DirectoryTree "$PackageDirectory/plugins/DataPane" "$plugins/DataPane"
+Copy-DirectoryTree "$PackageDirectory/licenses" "$plugins/DataPane/licenses"
 if (Test-Path -LiteralPath $backup) { Write-Host "Backup: $backup" }
 Write-Host 'Installed DataPane. Start TrafficMonitor and open DataPane options. Restart TrafficMonitor after adding or removing display items.'

@@ -1,6 +1,6 @@
 using System.Globalization;
-using UsageBridge.Core;
-namespace UsageBridge;
+using DataPane.Core;
+namespace DataPane;
 
 internal static class TestPreview
 {

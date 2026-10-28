@@ -1,6 +1,6 @@
 using System.Text.Json;
-using UsageBridge.Core;
-namespace UsageBridge;
+using DataPane.Core;
+namespace DataPane;
 
 internal static class SettingsTests
 {
@@ -146,7 +146,7 @@ internal static class SettingsTests
             DisplayNames.Write(directory, namesConfig);
             byte[] names = File.ReadAllBytes(Path.Combine(directory, "display-names.bin"));
             string NameAt(int slot) => System.Text.Encoding.Unicode.GetString(names, 4 + slot * 128, 128).TrimEnd('\0');
-            Check(names.Length == 2052 && BitConverter.ToUInt32(names) == 0x314E4255 && NameAt(0) == "账户余额" && NameAt(1) == "账户余额", "Name cache format or duplicate names");
+            Check(names.Length == 2052 && BitConverter.ToUInt32(names) == 0x314E5044 && NameAt(0) == "账户余额" && NameAt(1) == "账户余额", "Name cache format or duplicate names");
             namesConfig.Views[0].Label = ""; namesConfig.Views.RemoveAt(1);
             DisplayNames.Write(directory, namesConfig); names = File.ReadAllBytes(Path.Combine(directory, "display-names.bin"));
             Check(NameAt(0) == "未命名" && NameAt(1) == "", "Name cache did not clear deleted item");

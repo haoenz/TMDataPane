@@ -1,4 +1,4 @@
-namespace UsageBridge.Core;
+namespace DataPane.Core;
 
 // Bounded arithmetic grammar, without reflection, I/O, assignments, scripts or loops.
 public sealed class Expression

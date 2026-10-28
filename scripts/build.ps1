@@ -26,10 +26,10 @@ foreach ($tool in @('cmake','dotnet')) {
     if (!(Get-Command $tool -ErrorAction SilentlyContinue)) { throw "Missing $tool. See docs/environment.md" }
 }
 & "$PSScriptRoot/bootstrap.ps1"
-& cmake -S $root -B "$root/build/native" -G 'Visual Studio 17 2022' -A x64
+& cmake -S $root -B "$root/build/datapane/native" -G 'Visual Studio 17 2022' -A x64
 if ($LASTEXITCODE -ne 0) { throw 'CMake configure failed' }
-& cmake --build "$root/build/native" --config $Configuration
+& cmake --build "$root/build/datapane/native" --config $Configuration
 if ($LASTEXITCODE -ne 0) { throw 'Native build failed' }
-& dotnet publish "$root/src/Collector.Windows/Collector.Windows.csproj" -c $Configuration -r win-x64 --self-contained $SelfContained.IsPresent.ToString().ToLowerInvariant() --configfile "$root/NuGet.Config" -p:NuGetAudit=false -o "$root/build/collector"
+& dotnet publish "$root/src/Collector.Windows/Collector.Windows.csproj" -c $Configuration -r win-x64 --self-contained $SelfContained.IsPresent.ToString().ToLowerInvariant() --configfile "$root/NuGet.Config" -p:NuGetAudit=false -o "$root/build/datapane/collector"
 if ($LASTEXITCODE -ne 0) { throw 'Collector publish failed' }
 Write-Host 'Build complete. Run scripts/package.ps1 to assemble the package.'

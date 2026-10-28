@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace UsageBridge.Core;
+namespace DataPane.Core;
 
 public sealed class Runner : IAsyncDisposable
 {

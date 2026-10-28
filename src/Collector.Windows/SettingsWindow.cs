@@ -1,6 +1,6 @@
 using System.Text.Json;
-using UsageBridge.Core;
-namespace UsageBridge;
+using DataPane.Core;
+namespace DataPane;
 
 internal sealed class SettingsWindow : Form
 {
@@ -45,7 +45,7 @@ internal sealed class SettingsWindow : Form
     {
         this.configPath = configPath; this.credentials = credentials; this.apply = apply; this.test = test; this.login = login; this.snapshot = snapshot;
         draft = Configuration.Parse(Serialize(config)); saved = Serialize(draft); applied = saved; diskVersion = File.Exists(configPath) ? File.ReadAllText(configPath) : null;
-        Text = "DataPane 配置 · 0.3.7"; Size = new(780, 520); MinimumSize = new(700, 440); StartPosition = FormStartPosition.CenterScreen;
+        Text = "DataPane 配置 · 0.4.0"; Size = new(780, 520); MinimumSize = new(700, 440); StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Microsoft YaHei UI", 9);
         var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4 };
         root.RowStyles.Add(new(SizeType.AutoSize)); root.RowStyles.Add(new(SizeType.AutoSize)); root.RowStyles.Add(new(SizeType.Percent, 100));

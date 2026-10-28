@@ -8,10 +8,10 @@
 #include <vector>
 #include "PluginInterface.h"
 
-struct TestNameCache { uint32_t version{0x314E4255}; wchar_t labels[16][64]{}; };
+struct TestNameCache { uint32_t version{0x314E5044}; wchar_t labels[16][64]{}; };
 static_assert(sizeof(TestNameCache) == 2052);
 bool WriteNames(const std::filesystem::path& root, const TestNameCache& names) {
-    const auto folder = root / L"UsageBridge";
+    const auto folder = root / L"DataPane";
     std::filesystem::create_directories(folder);
     const auto temp = folder / L"display-names.bin.tmp";
     { std::ofstream file(temp, std::ios::binary); file.write(reinterpret_cast<const char*>(&names), sizeof(names)); }
@@ -26,7 +26,7 @@ int TestNames(ITMPlugin* plugin, const std::filesystem::path& root) {
     if (std::wstring(plugin->GetItem(0)->GetItemName()) != L"余额" || std::wstring(plugin->GetItem(1)->GetItemName()) != L"余额") return 12;
     const int slots[] = {1, 5, 16};
     for (int i = 0; i < 3; ++i)
-        if (std::wstring(plugin->GetItem(i)->GetItemId()) != L"UsageBridge.Slot." + std::to_wstring(slots[i])) return 13;
+        if (std::wstring(plugin->GetItem(i)->GetItemId()) != L"DataPane.Slot." + std::to_wstring(slots[i])) return 13;
     const wchar_t* first = plugin->GetItem(0)->GetItemName();
     plugin->GetItem(2)->GetItemName();
     if (std::wstring(first) != L"余额") return 14;
@@ -36,12 +36,12 @@ int TestNames(ITMPlugin* plugin, const std::filesystem::path& root) {
     plugin->DataRequired();
     // The host's existing pointers must remain valid until restart, even after add/delete.
     if (std::wstring(plugin->GetItem(0)->GetItemName()) != L"网页余额" || plugin->GetItem(1) != removed || plugin->GetItem(3)) return 16;
-    if (std::wstring(removed->GetItemId()) != L"UsageBridge.Slot.5") return 17;
+    if (std::wstring(removed->GetItemId()) != L"DataPane.Slot.5") return 17;
     names.version = 0;
     if (!WriteNames(root, names)) return 18;
     plugin->OnExtenedInfo(ITMPlugin::EI_CONFIG_DIR, root.c_str());
     if (std::wstring(plugin->GetItem(0)->GetItemName()) != L"网页余额") return 19;
-    names.version = 0x314E4255;
+    names.version = 0x314E5044;
     if (!WriteNames(root, names)) return 20;
     return 0;
 }
@@ -87,7 +87,7 @@ int wmain(int argc, wchar_t** argv) {
         get = reinterpret_cast<ITMPlugin*(*)()>(GetProcAddress(dll, "TMPluginGetInstance"));
         plugin = get(); plugin->OnExtenedInfo(ITMPlugin::EI_CONFIG_DIR, argv[2]);
         result = plugin->GetItem(2) && !plugin->GetItem(3) && std::wstring(plugin->GetItem(0)->GetItemName()) == L"网页余额" &&
-            std::wstring(plugin->GetItem(1)->GetItemId()) == L"UsageBridge.Slot.9" ? 0 : 21;
+            std::wstring(plugin->GetItem(1)->GetItemId()) == L"DataPane.Slot.9" ? 0 : 21;
         FreeLibrary(dll); if (result) return result;
         TestNameCache empty;
         if (!WriteNames(argv[2], empty)) return 22;
@@ -103,7 +103,7 @@ int wmain(int argc, wchar_t** argv) {
         dll = LoadLibraryW(argv[1]); if (!dll) return 27;
         get = reinterpret_cast<ITMPlugin*(*)()>(GetProcAddress(dll, "TMPluginGetInstance"));
         plugin = get(); plugin->OnExtenedInfo(ITMPlugin::EI_CONFIG_DIR, argv[2]);
-        result = plugin->GetItem(0) && !plugin->GetItem(1) && std::wstring(plugin->GetItem(0)->GetItemId()) == L"UsageBridge.Slot.9" ? 0 : 28;
+        result = plugin->GetItem(0) && !plugin->GetItem(1) && std::wstring(plugin->GetItem(0)->GetItemId()) == L"DataPane.Slot.9" ? 0 : 28;
         FreeLibrary(dll);
         if (!result) std::wcout << L"PASS: sparse slots, duplicate names, stable IDs/pointers, rename, restart membership, empty config and first addition" << std::endl;
         return result;

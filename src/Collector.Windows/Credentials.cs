@@ -1,8 +1,8 @@
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
-using UsageBridge.Core;
-namespace UsageBridge;
+using DataPane.Core;
+namespace DataPane;
 
 internal sealed class Credentials(string directory)
 {
@@ -33,7 +33,7 @@ internal sealed class Credentials(string directory)
         var input = new Blob { Length = bytes.Length, Data = Marshal.AllocHGlobal(bytes.Length) }; Blob output = default;
         try {
             Marshal.Copy(bytes, 0, input.Data, bytes.Length);
-            bool ok = protect ? CryptProtectData(ref input, "UsageBridge", IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 1, out output)
+            bool ok = protect ? CryptProtectData(ref input, "DataPane", IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 1, out output)
                 : CryptUnprotectData(ref input, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 1, out output);
             if (!ok) throw new CryptographicException("Windows DPAPI 操作失败");
             var result = new byte[output.Length]; Marshal.Copy(output.Data, result, 0, result.Length); return result;

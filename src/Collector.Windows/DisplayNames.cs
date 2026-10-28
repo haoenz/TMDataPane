@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
-using UsageBridge.Core;
-namespace UsageBridge;
+using DataPane.Core;
+namespace DataPane;
 
 // Derived names only; the native DLL can read these without starting collection or parsing credentials.
 internal static class DisplayNames
@@ -9,7 +9,7 @@ internal static class DisplayNames
     internal static void Write(string directory, Configuration config)
     {
         byte[] bytes = new byte[4 + 16 * 64 * 2];
-        BinaryPrimitives.WriteUInt32LittleEndian(bytes, 0x314E4255); // UBN1
+        BinaryPrimitives.WriteUInt32LittleEndian(bytes, 0x314E5044); // DPN1
         foreach (var view in config.Views) {
             string name = string.IsNullOrWhiteSpace(view.Label) ? "未命名" : view.Label;
             name = new string(name.Select(c => char.IsControl(c) ? ' ' : c).ToArray());

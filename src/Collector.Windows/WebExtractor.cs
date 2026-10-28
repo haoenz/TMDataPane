@@ -2,8 +2,8 @@ using AngleSharp.Html.Parser;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 using System.Text.Json;
-using UsageBridge.Core;
-namespace UsageBridge;
+using DataPane.Core;
+namespace DataPane;
 
 internal sealed class WebExtractor(string directory, string? fixtureFolder = null) : IWebExtractor
 {
@@ -54,7 +54,7 @@ internal sealed class WebExtractor(string directory, string? fixtureFolder = nul
                 browser.CoreWebView2.ProcessFailed += (_, e) => Trace("ProcessFailed " + e.ProcessFailedKind);
                 browser.CoreWebView2.DOMContentLoaded += (_, _) => Trace("DOMContentLoaded");
             }
-            if (fixtureFolder is not null) browser.CoreWebView2.SetVirtualHostNameToFolderMapping("usagebridge.test", fixtureFolder, CoreWebView2HostResourceAccessKind.DenyCors);
+            if (fixtureFolder is not null) browser.CoreWebView2.SetVirtualHostNameToFolderMapping("datapane.test", fixtureFolder, CoreWebView2HostResourceAccessKind.DenyCors);
             browser.CoreWebView2.Settings.AreHostObjectsAllowed = false;
             browser.CoreWebView2.Settings.IsWebMessageEnabled = false;
             browser.CoreWebView2.DownloadStarting += (_, e) => e.Cancel = true;

@@ -91,7 +91,7 @@ class Plugin final : public ITMPlugin {
         LARGE_INTEGER length{};
         DWORD read{};
         if (!GetFileSizeEx(file.value, &length) || length.QuadPart != sizeof(names) ||
-            !ReadFile(file.value, &names, sizeof(names), &read, nullptr) || read != sizeof(names) || names.version != 0x314E4255) return;
+            !ReadFile(file.value, &names, sizeof(names), &read, nullptr) || read != sizeof(names) || names.version != 0x314E5044) return;
         for (const auto& label : names.labels) if (label[63] != L'\0') return;
         for (size_t i = 0; i < items.size(); ++i) {
             configured[i] = names.labels[i][0] != L'\0';
@@ -116,7 +116,7 @@ class Plugin final : public ITMPlugin {
         if (FAILED(CoCreateGuid(&id))) { setAll(L"IPC error"); return; }
         wchar_t guid[40]{};
         StringFromGUID2(id, guid, 40);
-        ipc = L"Local\\UsageBridge-" + std::to_wstring(GetCurrentProcessId()) + L"-" + guid;
+        ipc = L"Local\\DataPane-" + std::to_wstring(GetCurrentProcessId()) + L"-" + guid;
         mapping.reset(CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, sizeof(Snapshot), (ipc + L"-snapshot").c_str()));
         snapshotMutex.reset(CreateMutexW(nullptr, FALSE, (ipc + L"-mutex").c_str()));
         showEvent.reset(CreateEventW(nullptr, FALSE, show, (ipc + L"-show").c_str()));
@@ -138,7 +138,7 @@ class Plugin final : public ITMPlugin {
         }
         wchar_t dllPath[32768]{};
         GetModuleFileNameW(moduleHandle, dllPath, 32768);
-        const auto exe = std::filesystem::path(dllPath).parent_path() / L"UsageBridge" / L"UsageBridge.Collector.exe";
+        const auto exe = std::filesystem::path(dllPath).parent_path() / L"DataPane" / L"DataPane.Collector.exe";
         // Paths are Windows paths (cannot contain quotes); append a filename to avoid trailing backslash quoting.
         std::wstring command = L"\"" + exe.wstring() + L"\" --ipc \"" + ipc + L"\" --config \"" + (config / L"config.json").wstring() + L"\"";
         STARTUPINFOEXW startup{};
@@ -156,7 +156,7 @@ public:
         for (size_t i = 0; i < items.size(); ++i) {
             items[i].slot = i;
             items[i].name = L"未配置";
-            items[i].id = L"UsageBridge.Slot." + std::to_wstring(i + 1);
+            items[i].id = L"DataPane.Slot." + std::to_wstring(i + 1);
         }
     }
     IPluginItem* GetItem(int index) override {
@@ -174,14 +174,14 @@ public:
         case TMI_NAME: return L"DataPane";
         case TMI_DESCRIPTION: return L"Usage, JSON and web data collector";
         case TMI_AUTHOR: return L"DataPane contributors";
-        case TMI_VERSION: return L"0.3.7-dev";
+        case TMI_VERSION: return L"0.4.0-dev";
         default: return L"";
         }
     }
     void OnExtenedInfo(ExtendedInfoIndex index, const wchar_t* data) override {
         if (index != EI_CONFIG_DIR || !data) return;
         std::lock_guard lock(guard);
-        config = std::filesystem::path(data) / L"UsageBridge";
+        config = std::filesystem::path(data) / L"DataPane";
         readNames();
         // Directory creation is done by the collector only when the user opens settings.
     }

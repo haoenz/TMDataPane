@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace UsageBridge.Core;
+namespace DataPane.Core;
 
 public sealed class Configuration
 {

@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace UsageBridge.Core;
+namespace DataPane.Core;
 
 public static class Extraction
 {

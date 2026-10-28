@@ -1,16 +1,16 @@
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $run = Join-Path $root ('artifacts/browser-lifecycle-' + [guid]::NewGuid().ToString('N'))
-New-Item -ItemType Directory -Force "$run/UsageBridge", "$run/config/UsageBridge" | Out-Null
-Copy-Item "$root/build/native/Release/UsageBridge.dll", "$root/build/native/Release/LifecycleHost.exe" $run
-Copy-Item "$root/build/collector/*" "$run/UsageBridge" -Recurse
+New-Item -ItemType Directory -Force "$run/DataPane", "$run/config/DataPane" | Out-Null
+Copy-Item "$root/build/datapane/native/Release/DataPane.dll", "$root/build/datapane/native/Release/LifecycleHost.exe" $run
+Copy-Item "$root/build/datapane/collector/*" "$run/DataPane" -Recurse
 # No authentication and no site dependency: navigation may fail, but its process tree must still be cleaned up.
-Set-Content "$run/config/UsageBridge/config.json" '{"version":2,"enabled":true,"sources":[{"id":"browser","kind":"browser_dom","url":"http://127.0.0.1:9/","timeoutSeconds":5,"fields":[{"name":"value","path":"#balance"}]}],"metrics":[{"id":"browser","source":"browser"}],"views":[{"slot":1,"metric":"browser","label":"Browser"}]}' -Encoding UTF8
-Set-Content "$run/config/UsageBridge/collection.enabled" '1'
+Set-Content "$run/config/DataPane/config.json" '{"version":2,"enabled":true,"sources":[{"id":"browser","kind":"browser_dom","url":"http://127.0.0.1:9/","timeoutSeconds":5,"fields":[{"name":"value","path":"#balance"}]}],"metrics":[{"id":"browser","source":"browser"}],"views":[{"slot":1,"metric":"browser","label":"Browser"}]}' -Encoding UTF8
+Set-Content "$run/config/DataPane/collection.enabled" '1'
 foreach ($kill in @($false,$true)) {
     $seconds = if ($kill) { 60 } else { 20 }
     $log = "$run/host-$seconds.log"
-    $arguments = '"{0}" "{1}" {2} auto' -f "$run/UsageBridge.dll", "$run/config", $seconds
+    $arguments = '"{0}" "{1}" {2} auto' -f "$run/DataPane.dll", "$run/config", $seconds
     $testProcess = Start-Process "$run/LifecycleHost.exe" -ArgumentList $arguments -WindowStyle Hidden -PassThru -RedirectStandardOutput $log
     $null = $testProcess.Handle
     try {

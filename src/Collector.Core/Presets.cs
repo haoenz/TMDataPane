@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 
-namespace UsageBridge.Core;
+namespace DataPane.Core;
 
 public static class Presets
 {

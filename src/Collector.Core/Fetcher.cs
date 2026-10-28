@@ -3,7 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
-namespace UsageBridge.Core;
+namespace DataPane.Core;
 
 public interface IWebExtractor : IDisposable
 {
@@ -25,7 +25,7 @@ public sealed class Fetcher : IDisposable
         secret = secretReader; web = webExtractor;
         captureSecrets = captureSecretsForPreview;
         client = new(handler ?? new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = Timeout.InfiniteTimeSpan };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("DataPane/0.3.7");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("DataPane/0.4.0");
     }
     public async Task<Collected> FetchAsync(Source source, CancellationToken cancellation)
     {

@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text.Json;
-using UsageBridge.Core;
+using DataPane.Core;
 
 int count = 0;
 void Check(bool condition, string message) { if (!condition) throw new Exception(message); count++; }
@@ -53,7 +53,7 @@ await using (var runner = new Runner(combined, new Fetcher(_=>"fixture", handler
     runner.Poll(true); await Task.Delay(50); values=runner.Snapshot();
     Check(values[0].Value=="~12.34" && values[0].Status.Contains("需要登录"),"Failure did not preserve/mark old value");
 }
-var temporary = Path.Combine(Path.GetTempPath(), "usagebridge-auth-test-"+Guid.NewGuid().ToString("N")+".json");
+var temporary = Path.Combine(Path.GetTempPath(), "datapane-auth-test-"+Guid.NewGuid().ToString("N")+".json");
 try {
     var codexSource = new Source { Kind="codex", AuthPath=temporary };
     string expected = "fixture-first";

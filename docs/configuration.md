@@ -1,12 +1,12 @@
 # 配置 v2
 
-配置位于宿主传入的插件配置目录的 `UsageBridge/config.json`。
-DataPane 从 0.3.7 起采用新名称；配置路径和内部显示项 ID 保留 UsageBridge 命名，以兼容旧版，无需迁移配置或密钥。
-旧生命周期原型 v1 配置不兼容；发布前原型只使用临时测试配置，没有迁移用户数据。
+配置位于宿主传入的插件配置目录的 `DataPane/config.json`。
+采集程序为 `DataPane.Collector.exe`，内部显示项 ID 为 `DataPane.Slot.1` 至 `DataPane.Slot.16`。配置、凭据和浏览器数据均位于 DataPane 配置目录内。
+配置文件使用下文所示的 v2 格式。
 配置面板提供数据源列表和分类表单，不提供内置 JSON 编辑。复杂规则在外部编辑 config.json。
 “测试数据”使用未保存的改动；“更新数据”作用于后台配置。添加源后勾选启用并保存应用。
 
-## 0.3.3 的草稿操作与位置
+## 草稿操作与位置
 
 点击“添加数据”，选择类型后填写表单。删除数据源会同时删除其指标和显示项，点击保存后才写入磁盘。
 “加载配置”经确认后放弃未保存编辑，重新读取 config.json。关闭窗口时可选择保存、放弃或取消。
@@ -21,10 +21,10 @@ DataPane 从 0.3.7 起采用新名称；配置路径和内部显示项 ID 保留
 本机检查到 TrafficMonitor 的 global_cfg.ini 为 portable_mode=true，路径为：
 
 ```text
-C:\Users\zhanghaoen\AppData\Local\Microsoft\WinGet\Packages\zhongyang219.TrafficMonitor.Full_Microsoft.Winget.Source_8wekyb3d8bbwe\TrafficMonitor\plugins\UsageBridge\config.json
+C:\Users\zhanghaoen\AppData\Local\Microsoft\WinGet\Packages\zhongyang219.TrafficMonitor.Full_Microsoft.Winget.Source_8wekyb3d8bbwe\TrafficMonitor\plugins\DataPane\config.json
 ```
 
-这不是工作区 examples 中的示例，也不是 `UsageBridge.Collector.runtimeconfig.json`（后者是 .NET 运行时文件）。
+这不是工作区 examples 中的示例，也不是 `DataPane.Collector.runtimeconfig.json`（后者是 .NET 运行时文件）。
 切换 TrafficMonitor 的配置存储模式后，配置路径会随宿主变化，以“打开配置目录”实际打开的位置为准。
 
 ## 第一排操作

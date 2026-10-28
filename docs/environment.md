@@ -24,7 +24,7 @@ MSBuild 默认临时目录和 NuGet 用户目录受限，脚本把 TEMP、APPDAT
 
 ## 架构差异与依据
 
-沿用 C++ DLL + .NET Windows Forms。选择 16 个永久槽位及稳定 ID `UsageBridge.Slot.1` 至 `.16`，配置可更换标签和指标，无需替换宿主保留的对象指针。主窗口/任务栏自行选择要显示的槽位。
+使用 C++ DLL + .NET Windows Forms。内部预留 16 个槽位及稳定 ID `DataPane.Slot.1` 至 `.16`，加载时仅注册已配置项；同一次加载期间不替换宿主保留的对象指针。增删显示项需重启 TM，改名可重新打开显示设置。
 共享内存快照替代命名管道传值；命名事件用于配置请求。DLL 无后台线程、无网络/COM 初始化；DataRequired 的共享锁使用零等待。
 Job 句柄不继承，启用 KILL_ON_JOB_CLOSE，使用 PROC_THREAD_ATTRIBUTE_JOB_LIST 在创建进程时纳入 Job。
 DllMain 卸载只关闭 Job，不等待异步线程。实际网页/请求取消由采集程序正常关闭路径负责。

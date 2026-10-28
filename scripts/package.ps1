@@ -1,15 +1,15 @@
 param([ValidateSet('Debug','Release')][string]$Configuration = 'Release')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-$native = "$root/build/native/$Configuration"
-foreach ($required in @("$native/UsageBridge.dll", "$root/build/collector/UsageBridge.Collector.exe", "$root/third_party/TrafficMonitor/LICENSE")) {
+$native = "$root/build/datapane/native/$Configuration"
+foreach ($required in @("$native/DataPane.dll", "$root/build/datapane/collector/DataPane.Collector.exe", "$root/third_party/TrafficMonitor/LICENSE")) {
     if (!(Test-Path -LiteralPath $required)) { throw "Missing build artifact: $required" }
 }
 # Unique staging directory prevents obsolete DLLs surviving a later package.
 $stage = Join-Path $root ('dist/DataPane-' + [guid]::NewGuid().ToString('N'))
-New-Item -ItemType Directory -Force "$stage/plugins/UsageBridge", "$stage/licenses" | Out-Null
-Copy-Item "$native/UsageBridge.dll" "$stage/plugins"
-Copy-Item "$root/build/collector/*" "$stage/plugins/UsageBridge" -Recurse
+New-Item -ItemType Directory -Force "$stage/plugins/DataPane", "$stage/licenses" | Out-Null
+Copy-Item "$native/DataPane.dll" "$stage/plugins"
+Copy-Item "$root/build/datapane/collector/*" "$stage/plugins/DataPane" -Recurse
 Copy-Item "$root/third_party/TrafficMonitor/LICENSE" "$stage/licenses/TrafficMonitor.txt"
 Copy-Item "$root/third_party/licenses/AngleSharp.txt" "$stage/licenses/AngleSharp.txt"
 Copy-Item "$root/artifacts/nuget-packages/microsoft.web.webview2/1.0.4314.35/LICENSE.txt" "$stage/licenses/WebView2.txt"
