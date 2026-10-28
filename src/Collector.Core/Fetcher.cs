@@ -84,9 +84,13 @@ public sealed class Fetcher : IDisposable
         if (source.Kind == "http_html") return (web ?? throw new CollectionFailure("提取失败", "未安装网页组件")).Html(text, source);
         using var doc = JsonDocument.Parse(text);
         var fields = new Dictionary<string, string>();
-        foreach (var field in source.Fields) fields.Add(field.Name, Extraction.Process(Extraction.Scalar(Extraction.Select(doc.RootElement, field.Path)), field));
+        var raw = new Dictionary<string, string>();
+        foreach (var field in source.Fields) {
+            string value = Extraction.Scalar(Extraction.Select(doc.RootElement, field.Path));
+            raw.Add(field.Name, value); fields.Add(field.Name, Extraction.Process(value, field));
+        }
         // Do not expose raw authenticated responses; preview the selected fields only.
-        return new(fields, "已提取选定字段；原始响应不写入日志");
+        return new(fields, "已提取选定字段；原始响应不写入日志", RawFields: raw);
     }
     private static async Task<string> ReadCodexToken(string path, CancellationToken cancellation)
     {

@@ -20,15 +20,16 @@ internal sealed class WebExtractor(string directory, string? fixtureFolder = nul
     {
         using var doc = new HtmlParser().ParseDocument(html);
         var fields = new Dictionary<string, string>();
+        var raw = new Dictionary<string, string>();
         if (source.SuccessSelector.Length > 0 && doc.QuerySelector(source.SuccessSelector) is null) throw new CollectionFailure("需要登录", "成功标志未出现");
         foreach (var field in source.Fields) {
             var matches = doc.QuerySelectorAll(field.Path);
             if (matches.Length == 0 || (!field.FirstMatch && matches.Length != 1)) throw new CollectionFailure("提取失败", "选择器匹配数量不是一个");
             var element = matches[0];
             string text = field.Attribute.Length == 0 ? element.TextContent : element.GetAttribute(field.Attribute) ?? throw new FormatException("属性不存在");
-            fields.Add(field.Name, Extraction.Process(text, field));
+            raw.Add(field.Name, text); fields.Add(field.Name, Extraction.Process(text, field));
         }
-        return new(fields, "静态 HTML 选中文本");
+        return new(fields, "静态 HTML 选中文本", RawFields: raw);
     }
     private async Task<Page> GetPage(Source source, CancellationToken cancellation)
     {
@@ -134,8 +135,12 @@ internal sealed class WebExtractor(string directory, string? fixtureFolder = nul
                 if (root.TryGetProperty("error", out _)) throw new CollectionFailure("提取失败", "选择器无效、匹配过多或属性不存在");
                 if (root.TryGetProperty("fields", out var values)) {
                     var fields = new Dictionary<string, string>();
-                    foreach (var field in source.Fields) fields.Add(field.Name, Extraction.Process(values.GetProperty(field.Name).GetString()!, field));
-                    return new(fields, "渲染后 DOM 选中文本");
+                    var raw = new Dictionary<string, string>();
+                    foreach (var field in source.Fields) {
+                        string text = values.GetProperty(field.Name).GetString()!;
+                        raw.Add(field.Name, text); fields.Add(field.Name, Extraction.Process(text, field));
+                    }
+                    return new(fields, "渲染后 DOM 选中文本", RawFields: raw);
                 }
                 if (root.TryGetProperty("pending", out var wait)) pending = wait.GetString()!;
                 await Task.Delay(200, cancellation);

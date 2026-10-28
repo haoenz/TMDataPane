@@ -137,7 +137,7 @@ public:
         case TMI_NAME: return L"UsageBridge";
         case TMI_DESCRIPTION: return L"Usage, JSON and web data collector";
         case TMI_AUTHOR: return L"UsageBridge contributors";
-        case TMI_VERSION: return L"0.2.1-dev";
+        case TMI_VERSION: return L"0.3.4-dev";
         default: return L"";
         }
     }

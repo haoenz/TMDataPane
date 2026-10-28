@@ -83,7 +83,7 @@ internal sealed class CollectorContext : ApplicationContext
     private void OpenSettings()
     {
         if (window is not null) { window.Show(); window.Activate(); return; }
-        window = new SettingsWindow(settings, configPath, credentials, Apply, () => runner.Poll(true), Test, Login);
+        window = new SettingsWindow(settings, configPath, credentials, Apply, () => runner.Poll(true), Test, Login, () => runner.Snapshot());
         window.FormClosed += async (_, _) => { window = null; if (!settings.HasWork) await Shutdown(); };
         window.Show();
     }
@@ -97,26 +97,14 @@ internal sealed class CollectorContext : ApplicationContext
             if (next.HasWork) File.WriteAllText(gatePath, "1");
             await runner.DisposeAsync(); web.Dispose();
             settings = next; web = new(directory); runner = new(settings, new Fetcher(credentials.Read, web));
-            if (!next.HasWork) { Publish(runner.Snapshot()); await Shutdown(); }
+            if (!next.HasWork) Publish(runner.Snapshot());
         } finally { applying = false; }
     }
     private async Task<string> Test(Configuration config, Source source)
     {
         using var fetcher = new Fetcher(credentials.Read, web, captureSecretsForPreview: true);
         var result = await fetcher.FetchAsync(source, lifetime.Token);
-        var safe = result.Fields.ToDictionary(x => x.Key, x => Configuration.IsSensitiveName(x.Key) ? "[已脱敏]" : fetcher.Redact(x.Value));
-        var lines = new List<string> { result.Preview, JsonSerializer.Serialize(safe, Configuration.JsonOptions) };
-        foreach (var metric in config.Metrics.Where(x => x.Source == source.Id)) {
-            try {
-                string value = metric.Text ? result.Fields[metric.Input] : (metric.Expression.Length == 0 ? Extraction.Number(result.Fields[metric.Input]) : Expression.Evaluate(metric.Expression, result.Fields)).ToString(System.Globalization.CultureInfo.InvariantCulture);
-                lines.Add(metric.Id + " = " + (Configuration.IsSensitiveName(metric.Input) ? "[已脱敏]" : fetcher.Redact(value)));
-                foreach (var view in config.Views.Where(x => x.Metric == metric.Id)) {
-                    string formatted = metric.Text ? value : Extraction.Number(value).ToString(view.Format, System.Globalization.CultureInfo.InvariantCulture);
-                    lines.Add($"显示槽位 {view.Slot}: {view.Label} " + (Configuration.IsSensitiveName(metric.Input) ? "[已脱敏]" : fetcher.Redact(formatted + view.Unit)));
-                }
-            } catch { lines.Add(metric.Id + " = 计算失败"); }
-        }
-        return string.Join(Environment.NewLine, lines);
+        return TestPreview.Render(config, source, result, fetcher.Redact);
     }
     private async Task Login(Source source)
     {

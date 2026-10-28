@@ -121,5 +121,5 @@ public sealed class CollectionFailure(string state, string message) : Exception(
 {
     public string State { get; } = state;
 }
-public sealed record Collected(Dictionary<string, string> Fields, string Preview, string Note = "");
+public sealed record Collected(Dictionary<string, string> Fields, string Preview, string Note = "", Dictionary<string, string>? RawFields = null);
 public sealed record DisplayValue(string Label, string Value, string Status);
