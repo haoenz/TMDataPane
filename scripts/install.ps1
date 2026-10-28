@@ -38,4 +38,4 @@ Copy-Item "$PackageDirectory/plugins/UsageBridge.dll" $plugins -Force
 Copy-DirectoryTree "$PackageDirectory/plugins/UsageBridge" "$plugins/UsageBridge"
 Copy-DirectoryTree "$PackageDirectory/licenses" "$plugins/UsageBridge/licenses"
 if (Test-Path -LiteralPath $backup) { Write-Host "Backup: $backup" }
-Write-Host 'Installed. Start TrafficMonitor, open UsageBridge options, add sources and set enabled=true, then save.'
+Write-Host 'Installed DataPane. Start TrafficMonitor and open DataPane options. Restart TrafficMonitor after adding or removing display items.'

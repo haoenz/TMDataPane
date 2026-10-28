@@ -24,7 +24,7 @@ internal sealed class SettingsWindow : Form
     private readonly string configPath;
     private Configuration draft;
     private string saved, applied, selectedId = "";
-    private bool busy, syncing, closeApproved;
+    private bool busy, syncing, closeApproved, restartNeeded;
     private string? diskVersion;
     internal Func<string, DialogResult>? ConfirmForTest;
     internal Configuration Draft => draft;
@@ -45,7 +45,7 @@ internal sealed class SettingsWindow : Form
     {
         this.configPath = configPath; this.credentials = credentials; this.apply = apply; this.test = test; this.login = login; this.snapshot = snapshot;
         draft = Configuration.Parse(Serialize(config)); saved = Serialize(draft); applied = saved; diskVersion = File.Exists(configPath) ? File.ReadAllText(configPath) : null;
-        Text = "UsageBridge 配置 · 0.3.4"; Size = new(780, 520); MinimumSize = new(700, 440); StartPosition = FormStartPosition.CenterScreen;
+        Text = "DataPane 配置 · 0.3.7"; Size = new(780, 520); MinimumSize = new(700, 440); StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Microsoft YaHei UI", 9);
         var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4 };
         root.RowStyles.Add(new(SizeType.AutoSize)); root.RowStyles.Add(new(SizeType.AutoSize)); root.RowStyles.Add(new(SizeType.Percent, 100));
@@ -113,6 +113,7 @@ internal sealed class SettingsWindow : Form
         bool needsApply = Serialize(draft) != applied;
         state.Text = IsDirty ? "● 有未保存的修改 · 保存后应用到后台" : needsApply ? "● 已读取文件 · 点击“保存配置”更新后台采集" : "✓ 配置未修改 · 请在 TM 勾选对应显示槽位";
         state.ForeColor = IsDirty || needsApply ? Color.DarkOrange : Color.DarkGreen;
+        if (restartNeeded) { state.Text += " · 显示项已变更，请重启 TM"; state.ForeColor = Color.DarkOrange; }
     }
     private void Rebuild()
     {
@@ -175,8 +176,11 @@ internal sealed class SettingsWindow : Form
         if (HasPendingKey) throw new FormatException("API Key 尚未加密保存。请先点击“加密保存 API Key”，再保存配置。");
         string? currentFile = File.Exists(configPath) ? File.ReadAllText(configPath) : null;
         if (currentFile != diskVersion) throw new FormatException("配置文件已被外部修改。请先点击“加载配置”读取文件，避免覆盖外部修改。");
-        var next = Current(); await apply(next); draft = next; saved = applied = Serialize(next); diskVersion = File.Exists(configPath) ? File.ReadAllText(configPath) : null; Rebuild();
-        SetStatus("已保存配置。" + (!next.HasWork ? "当前未自动更新。" : "采集已启用。"));
+        var next = Current();
+        bool membershipChanged = !Configuration.Parse(applied).Views.Select(x => x.Slot).ToHashSet().SetEquals(next.Views.Select(x => x.Slot));
+        await apply(next); restartNeeded |= membershipChanged;
+        draft = next; saved = applied = Serialize(next); diskVersion = File.Exists(configPath) ? File.ReadAllText(configPath) : null; Rebuild();
+        SetStatus("已保存配置。" + (!next.HasWork ? "当前未自动更新。" : "采集已启用。") + (restartNeeded ? "显示项已变更，请重启 TM 更新显示列表。" : ""));
     }
     private async Task TestSelected()
     {
@@ -201,7 +205,7 @@ internal sealed class SettingsWindow : Form
             if (source is null) { Hint("还没有数据源\n点击“添加数据”开始。可先选择“示例数据”体验显示效果。"); return; }
             Hint(Title(source), true);
             var sourceMetricIds = draft.Metrics.Where(x => x.Source == source.Id).Select(x => x.Id).ToHashSet();
-            Hint("TM 显示槽位：" + string.Join("、", draft.Views.Where(x => sourceMetricIds.Contains(x.Metric)).Select(x => $"{x.Label} → UsageBridge {x.Slot}")));
+            Hint("TM 显示名称：" + string.Join("、", draft.Views.Where(x => sourceMetricIds.Contains(x.Metric)).Select(x => string.IsNullOrWhiteSpace(x.Label) ? "未命名" : x.Label)));
             Toggle("启用此数据源", "SourceEnabled", source.Enabled, v => source.Enabled = v);
             Number("刷新间隔（秒）", "IntervalSeconds", source.IntervalSeconds, 5, 86400, v => source.IntervalSeconds = v);
             Number("请求超时（秒）", "TimeoutSeconds", source.TimeoutSeconds, 1, 120, v => source.TimeoutSeconds = v);
@@ -239,7 +243,7 @@ internal sealed class SettingsWindow : Form
                 Hint("指标：" + metric.Input + (metric.Expression.Length > 0 ? "（已有计算公式）" : ""));
                 Toggle("作为文本显示（不进行数字计算）", "Text_" + metric.Id, metric.Text, v => metric.Text = v);
                 foreach (var view in draft.Views.Where(x => x.Metric == metric.Id)) {
-                    Hint("在 TM 中勾选 UsageBridge " + view.Slot);
+                    Hint("增删显示项后需重启 TM；仅改名可重新打开 TM 显示设置。");
                     TextField("显示名称", "Label_" + view.Slot, view.Label, v => { view.Label = v; var item = sources.Items.Cast<ListViewItem>().FirstOrDefault(x => (string)x.Tag! == source.Id); if (item is not null) item.Text = v; });
                     TextField("数字格式", "Format_" + view.Slot, view.Format, v => view.Format = v, "0.00 固定两位 / 0.## 最多两位");
                     TextField("单位后缀", "Unit_" + view.Slot, view.Unit, v => view.Unit = v, "例如 元 / %");

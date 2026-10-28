@@ -1,0 +1,24 @@
+using System.Buffers.Binary;
+using System.Text;
+using UsageBridge.Core;
+namespace UsageBridge;
+
+// Derived names only; the native DLL can read these without starting collection or parsing credentials.
+internal static class DisplayNames
+{
+    internal static void Write(string directory, Configuration config)
+    {
+        byte[] bytes = new byte[4 + 16 * 64 * 2];
+        BinaryPrimitives.WriteUInt32LittleEndian(bytes, 0x314E4255); // UBN1
+        foreach (var view in config.Views) {
+            string name = string.IsNullOrWhiteSpace(view.Label) ? "未命名" : view.Label;
+            name = new string(name.Select(c => char.IsControl(c) ? ' ' : c).ToArray());
+            int length = Math.Min(name.Length, 63);
+            if (length > 0 && char.IsHighSurrogate(name[length - 1])) length--;
+            Encoding.Unicode.GetBytes(name.AsSpan(0, length), bytes.AsSpan(4 + (view.Slot - 1) * 128, 128));
+        }
+        string path = Path.Combine(directory, "display-names.bin");
+        File.WriteAllBytes(path + ".tmp", bytes);
+        File.Move(path + ".tmp", path, true);
+    }
+}

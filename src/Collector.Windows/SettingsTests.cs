@@ -81,6 +81,7 @@ internal static class SettingsTests
             failureDialog.Close();
             Click("更新数据"); Check(refreshes == 1 && saves == 0, "Refresh saved draft");
             Click("保存配置"); Check(saves == 1 && !window.IsDirty && Configuration.Parse(File.ReadAllText(path)).Enabled, "Save/apply state");
+            Check(window.StatusText.Contains("重启 TM") && ((Label)Find("SaveState")).Text.Contains("重启 TM"), "Missing restart reminder for added display items");
             Text("Label_1", "未保存标题"); window.ConfirmForTest = _ => DialogResult.Cancel;
             Click("加载配置"); Check(window.Draft.Views[0].Label == "未保存标题", "Canceled restore discarded edits");
             window.Close(); Check(!window.IsDisposed, "Canceled close discarded edits");
@@ -91,7 +92,7 @@ internal static class SettingsTests
             string preview = TestPreview.Render(config, config.Sources[0], new(raw, "网页", RawFields: raw), x => x);
             Check(preview.Contains("¥9.38") && preview.Contains("移除") && preview.Contains("计算失败"), "Currency error guidance");
             preview = TestPreview.Render(config, config.Sources[0], new(new() { ["value"] = "9.38" }, "网页", RawFields: raw), x => x);
-            Check(preview.Contains("¥9.38 → 9.38") && preview.Contains("UsageBridge 1 → 余额 9.38 元"), "Processed preview");
+            Check(preview.Contains("¥9.38 → 9.38") && preview.Contains("显示项 1 → 余额 9.38 元"), "Processed preview");
             using (var extractor = new WebExtractor(directory)) {
                 var extracted = extractor.Html("<b id='amount'>¥1,234.50</b>", config.Sources[0]);
                 Check(extracted.RawFields!["value"] == "¥1,234.50" && extracted.Fields["value"] == "1234.50", "HTML raw/processed fields");
@@ -139,6 +140,16 @@ internal static class SettingsTests
             using var discard = new SettingsWindow(new(), path, credentials, _ => throw new Exception("Unexpected save"), () => { }, (_, _) => Task.FromResult(""), _ => Task.CompletedTask) { Opacity = 0 };
             discard.ConfirmForTest = _ => DialogResult.No; discard.Show(); discard.AddSource("demo"); discard.Close();
             Check(discard.IsDisposed, "Discard close failed");
+            var namesConfig = Presets.Demo();
+            namesConfig.Views[0].Label = "账户余额";
+            namesConfig.Views.Add(new() { Slot = 2, Metric = "demo", Label = "账户余额" });
+            DisplayNames.Write(directory, namesConfig);
+            byte[] names = File.ReadAllBytes(Path.Combine(directory, "display-names.bin"));
+            string NameAt(int slot) => System.Text.Encoding.Unicode.GetString(names, 4 + slot * 128, 128).TrimEnd('\0');
+            Check(names.Length == 2052 && BitConverter.ToUInt32(names) == 0x314E4255 && NameAt(0) == "账户余额" && NameAt(1) == "账户余额", "Name cache format or duplicate names");
+            namesConfig.Views[0].Label = ""; namesConfig.Views.RemoveAt(1);
+            DisplayNames.Write(directory, namesConfig); names = File.ReadAllBytes(Path.Combine(directory, "display-names.bin"));
+            Check(NameAt(0) == "未命名" && NameAt(1) == "", "Name cache did not clear deleted item");
             File.WriteAllText(Path.Combine(directory, "settings-results.json"), JsonSerializer.Serialize(new { Passed = true, Checks = checks, DpapiAvailable = dpapiAvailable, CredentialRoundtrip = dpapiAvailable ? "passed" : "requires normal desktop; sandbox DPAPI unavailable" })); return 0;
         } catch (Exception error) {
             File.WriteAllText(Path.Combine(directory, "settings-error.txt"), error.ToString()); return 1;

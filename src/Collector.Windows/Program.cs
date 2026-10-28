@@ -48,6 +48,10 @@ internal sealed class CollectorContext : ApplicationContext
         credentials = new(directory);
         try { settings = File.Exists(path) ? Configuration.Parse(File.ReadAllText(path)) : new(); }
         catch { settings = new(); loadError = "配置无法读取或版本不受支持；请修正配置。原文件未覆盖。"; }
+        if (loadError.Length == 0) {
+            try { DisplayNames.Write(directory, settings); }
+            catch { loadError = "无法更新 TM 显示名称缓存，请检查配置目录权限后重新保存配置。"; }
+        }
         web = new(directory); runner = new(settings, new Fetcher(credentials.Read, web));
         if (!settings.HasWork) File.Delete(gatePath);
         timer.Tick += async (_, _) => await Tick(); timer.Start();
@@ -94,6 +98,7 @@ internal sealed class CollectorContext : ApplicationContext
             File.Delete(gatePath);
             File.WriteAllText(configPath + ".tmp", JsonSerializer.Serialize(next, Configuration.JsonOptions));
             File.Move(configPath + ".tmp", configPath, true);
+            DisplayNames.Write(directory, next);
             if (next.HasWork) File.WriteAllText(gatePath, "1");
             await runner.DisposeAsync(); web.Dispose();
             settings = next; web = new(directory); runner = new(settings, new Fetcher(credentials.Read, web));

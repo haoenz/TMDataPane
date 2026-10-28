@@ -34,8 +34,8 @@ internal static class TestPreview
             foreach (var view in config.Views.Where(x => x.Metric == metric.Id)) {
                 try {
                     string formatted = metric.Text ? value : Extraction.Number(value).ToString(view.Format, CultureInfo.InvariantCulture);
-                    lines.Add($"  UsageBridge {view.Slot} → {view.Label} {(sensitive ? "[已脱敏]" : redact(formatted + view.Unit))}");
-                } catch { lines.Add($"  UsageBridge {view.Slot}：显示格式无效，请尝试 0.00 或 0.##。"); }
+                    lines.Add($"  显示项 {view.Slot} → {view.Label} {(sensitive ? "[已脱敏]" : redact(formatted + view.Unit))}");
+                } catch { lines.Add($"  显示项 {view.Slot}：显示格式无效，请尝试 0.00 或 0.##。"); }
             }
         }
         lines.Add("测试结束 · 草稿尚未应用，确认后点击“保存配置”。");

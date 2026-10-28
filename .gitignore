@@ -27,6 +27,7 @@ browser-profile/
 *.WebView2/
 instance.lock
 collection.enabled
+display-names.bin
 
 # Local secrets and agent settings (keep examples checked in)
 .env

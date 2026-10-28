@@ -6,7 +6,7 @@ foreach ($required in @("$native/UsageBridge.dll", "$root/build/collector/UsageB
     if (!(Test-Path -LiteralPath $required)) { throw "Missing build artifact: $required" }
 }
 # Unique staging directory prevents obsolete DLLs surviving a later package.
-$stage = Join-Path $root ('dist/UsageBridge-' + [guid]::NewGuid().ToString('N'))
+$stage = Join-Path $root ('dist/DataPane-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force "$stage/plugins/UsageBridge", "$stage/licenses" | Out-Null
 Copy-Item "$native/UsageBridge.dll" "$stage/plugins"
 Copy-Item "$root/build/collector/*" "$stage/plugins/UsageBridge" -Recurse

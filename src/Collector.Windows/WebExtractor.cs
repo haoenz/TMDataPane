@@ -42,7 +42,7 @@ internal sealed class WebExtractor(string directory, string? fixtureFolder = nul
         environment ??= CoreWebView2Environment.CreateAsync(null, Path.Combine(directory, "browser-profile"));
         var env = await environment.WaitAsync(cancellation);
         Trace("Environment ready");
-        var form = new BackgroundForm { Text = "UsageBridge 登录 · " + source.Id, Width = 1050, Height = 760, ShowInTaskbar = false, Opacity = 0 };
+        var form = new BackgroundForm { Text = "DataPane 登录 · " + source.Id, Width = 1050, Height = 760, ShowInTaskbar = false, Opacity = 0 };
         var browser = new WebView2 { Dock = DockStyle.Fill }; form.Controls.Add(browser);
         form.Show();
         try {

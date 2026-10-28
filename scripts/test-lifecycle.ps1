@@ -32,6 +32,10 @@ try {
 } finally { if (!$hostProcess.HasExited) { Stop-Process -Id $hostProcess.Id } }
 Set-Content "$run/config/UsageBridge/config.json" '{"version":2,"enabled":true,"sources":[{"id":"demo","kind":"demo"}],"metrics":[{"id":"demo","source":"demo","input":"value"}],"views":[{"slot":1,"metric":"demo","label":"DEMO","format":"0.0","unit":"%"}]}' -Encoding UTF8
 Set-Content "$run/config/UsageBridge/collection.enabled" '1'
+$names = New-Object byte[] 2052
+[BitConverter]::GetBytes([uint32]0x314E4255).CopyTo($names, 0)
+[Text.Encoding]::Unicode.GetBytes('DEMO').CopyTo($names, 4)
+[IO.File]::WriteAllBytes("$run/config/UsageBridge/display-names.bin", $names)
 foreach ($kill in @($false, $true)) {
     $hostProcess = Start-TestHost $(if ($kill) { 60 } else { 15 })
     try {

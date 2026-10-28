@@ -40,7 +40,12 @@ public:
     std::mutex guard;
     size_t slot{};
     std::wstring name, id, text{L"Stopped"}, label;
-    const wchar_t* GetItemName() const override { return name.c_str(); }
+    const wchar_t* GetItemName() const override {
+        thread_local wchar_t buffer[16][64]{};
+        auto& self = const_cast<Item&>(*this);
+        std::lock_guard lock(self.guard);
+        wcsncpy_s(buffer[slot], name.c_str(), _TRUNCATE); return buffer[slot];
+    }
     const wchar_t* GetItemId() const override { return id.c_str(); }
     const wchar_t* GetItemLableText() const override {
         thread_local wchar_t buffer[16][64]{}; // POD: no destructor after DLL unload.
@@ -60,16 +65,39 @@ public:
         text = std::move(next);
     }
     void setLabel(std::wstring next) { std::lock_guard lock(guard); label = std::move(next); }
+    void setName(std::wstring next) { std::lock_guard lock(guard); name = next.empty() ? L"未配置" : std::move(next); }
 };
 
 class Plugin final : public ITMPlugin {
     std::array<Item, 16> items;
+    std::array<bool, 16> configured{};
+    std::vector<size_t> registeredSlots;
+    bool enumerationFrozen{};
     std::mutex guard;
     std::filesystem::path config;
-    std::wstring ipc, tooltip{L"Open UsageBridge options to configure sources."};
+    std::wstring ipc, tooltip{L"Open DataPane options to configure sources."};
     void setAll(const wchar_t* text) { for (auto& item : items) item.set(text); }
     Handle process, mapping, snapshotMutex, showEvent, stopEvent;
     ULONGLONG nextAttempt{};
+    ULONGLONG nextNamesRead{};
+    void readNames() {
+        if (config.empty()) return;
+        Handle file;
+        file.value = CreateFileW((config / L"display-names.bin").c_str(), GENERIC_READ,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (file.value == INVALID_HANDLE_VALUE) { file.value = nullptr; return; }
+        struct Names { uint32_t version; wchar_t labels[16][64]; } names{};
+        static_assert(sizeof(Names) == 2052);
+        LARGE_INTEGER length{};
+        DWORD read{};
+        if (!GetFileSizeEx(file.value, &length) || length.QuadPart != sizeof(names) ||
+            !ReadFile(file.value, &names, sizeof(names), &read, nullptr) || read != sizeof(names) || names.version != 0x314E4255) return;
+        for (const auto& label : names.labels) if (label[63] != L'\0') return;
+        for (size_t i = 0; i < items.size(); ++i) {
+            configured[i] = names.labels[i][0] != L'\0';
+            items[i].setName(names.labels[i]);
+        }
+    }
     void fail(const wchar_t* action) {
         const DWORD error = GetLastError();
         tooltip = std::wstring(action) + L" (Win32 " + std::to_wstring(error) + L")";
@@ -127,17 +155,26 @@ public:
     Plugin() {
         for (size_t i = 0; i < items.size(); ++i) {
             items[i].slot = i;
-            items[i].name = L"UsageBridge " + std::to_wstring(i + 1);
+            items[i].name = L"未配置";
             items[i].id = L"UsageBridge.Slot." + std::to_wstring(i + 1);
         }
     }
-    IPluginItem* GetItem(int index) override { return index >= 0 && index < 16 ? &items[index] : nullptr; }
+    IPluginItem* GetItem(int index) override {
+        std::lock_guard lock(guard);
+        if (index < 0) return nullptr;
+        // TM stores these pointers until unload. Freeze membership, not names or values.
+        if (!enumerationFrozen) {
+            for (size_t i = 0; i < items.size(); ++i) if (configured[i]) registeredSlots.push_back(i);
+            enumerationFrozen = true;
+        }
+        return static_cast<size_t>(index) < registeredSlots.size() ? &items[registeredSlots[index]] : nullptr;
+    }
     const wchar_t* GetInfo(PluginInfoIndex index) override {
         switch (index) {
-        case TMI_NAME: return L"UsageBridge";
+        case TMI_NAME: return L"DataPane";
         case TMI_DESCRIPTION: return L"Usage, JSON and web data collector";
-        case TMI_AUTHOR: return L"UsageBridge contributors";
-        case TMI_VERSION: return L"0.3.4-dev";
+        case TMI_AUTHOR: return L"DataPane contributors";
+        case TMI_VERSION: return L"0.3.7-dev";
         default: return L"";
         }
     }
@@ -145,12 +182,14 @@ public:
         if (index != EI_CONFIG_DIR || !data) return;
         std::lock_guard lock(guard);
         config = std::filesystem::path(data) / L"UsageBridge";
+        readNames();
         // Directory creation is done by the collector only when the user opens settings.
     }
     void DataRequired() override {
         std::lock_guard lock(guard);
         try {
             const auto now = GetTickCount64();
+            if (now >= nextNamesRead) { nextNamesRead = now + 1000; readNames(); }
             if (!alive()) {
                 if (enabled() && now >= nextAttempt) { nextAttempt = now + 30000; start(false); }
                 else if (!enabled()) setAll(L"Stopped");

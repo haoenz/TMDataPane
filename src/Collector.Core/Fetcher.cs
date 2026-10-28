@@ -25,7 +25,7 @@ public sealed class Fetcher : IDisposable
         secret = secretReader; web = webExtractor;
         captureSecrets = captureSecretsForPreview;
         client = new(handler ?? new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = Timeout.InfiniteTimeSpan };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("UsageBridge/0.2");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("DataPane/0.3.7");
     }
     public async Task<Collected> FetchAsync(Source source, CancellationToken cancellation)
     {
