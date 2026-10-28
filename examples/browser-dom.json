@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "enabled": false,
+  "sources": [{
+    "id": "website", "kind": "browser_dom", "url": "https://example.com/account", "successSelector": "#account",
+    "intervalSeconds": 60, "timeoutSeconds": 30,
+    "fields": [{ "name": "used", "path": "#used", "attribute": "", "firstMatch": false, "requireNonEmpty": true, "steps": [{ "kind": "trim" }, { "kind": "replace", "pattern": ",", "replacement": "" }] }]
+  }],
+  "metrics": [{ "id": "remaining", "source": "website", "expression": "round(5000 - used, 2)" }],
+  "views": [{ "slot": 1, "metric": "remaining", "label": "剩余", "format": "0.00" }]
+}

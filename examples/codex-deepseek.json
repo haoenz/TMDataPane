@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "enabled": false,
+  "sources": [
+    { "id": "codex", "kind": "codex", "enabled": true, "authPath": "", "intervalSeconds": 60 },
+    { "id": "deepseek", "kind": "deepseek", "enabled": false, "credential": "deepseek", "currency": "CNY", "intervalSeconds": 300 }
+  ],
+  "metrics": [
+    { "id": "h5", "source": "codex", "input": "h5Remaining" },
+    { "id": "week", "source": "codex", "input": "weekRemaining" },
+    { "id": "balance", "source": "deepseek", "input": "total_balance" }
+  ],
+  "views": [
+    { "slot": 1, "metric": "h5", "label": "Codex 5h", "format": "0.0", "unit": "%" },
+    { "slot": 2, "metric": "week", "label": "Codex 周", "format": "0.0", "unit": "%" },
+    { "slot": 3, "metric": "balance", "label": "DeepSeek", "format": "0.00####", "unit": " CNY" }
+  ]
+}

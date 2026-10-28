@@ -1,0 +1,15 @@
+* text=auto
+*.cs text eol=lf
+*.cpp text eol=lf
+*.h text eol=lf
+*.csproj text eol=lf
+*.cmake text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.ps1 text eol=crlf
+CMakeLists.txt text eol=lf
+NuGet.Config text eol=lf
+
+# Preserve vendored bytes for the recorded SHA256 hashes.
+third_party/TrafficMonitor/PluginInterface.h -text
+third_party/TrafficMonitor/LICENSE -text

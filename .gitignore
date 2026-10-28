@@ -1,0 +1,48 @@
+# Build output, downloaded dependencies and test artifacts
+/build/
+/dist/
+/artifacts/
+**/bin/
+**/obj/
+/out/
+/cmake-build-*/
+
+# IDE and per-user settings
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Installed plugin copies, backups and runtime data
+/plugins/
+UsageBridge-backup-*/
+config.json
+config.json.*
+auth.json
+credentials/
+browser-profile/
+*.WebView2/
+instance.lock
+collection.enabled
+
+# Local secrets and agent settings (keep examples checked in)
+.env
+.env.*
+!.env.example
+*.local.json
+/.codex/
+/.agents/
+/.aws/
+
+# Logs, crash dumps and editor temporary files
+*.log
+*.dmp
+*.tmp
+*.swp
+*~
+Thumbs.db
+Desktop.ini
+.DS_Store

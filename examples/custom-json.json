@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "enabled": false,
+  "sources": [{
+    "id": "account", "kind": "http_json", "url": "https://example.com/account.json", "method": "GET",
+    "headers": { "Accept": "application/json" }, "secretHeaders": {},
+    "intervalSeconds": 60, "timeoutSeconds": 15,
+    "fields": [{ "name": "used", "path": "$.account.used", "steps": [{ "kind": "trim" }, { "kind": "replace", "pattern": ",", "replacement": "" }] }]
+  }],
+  "metrics": [{ "id": "remaining", "source": "account", "expression": "5000 - used" }],
+  "views": [{ "slot": 1, "metric": "remaining", "label": "剩余", "format": "0.##" }]
+}
