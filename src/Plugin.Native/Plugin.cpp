@@ -40,6 +40,7 @@ public:
     std::mutex guard;
     size_t slot{};
     std::wstring name, id, text{L"Stopped"}, label;
+    std::wstring widthSample{L"~999999.99 CNY"};
     const wchar_t* GetItemName() const override {
         thread_local wchar_t buffer[16][64]{};
         auto& self = const_cast<Item&>(*this);
@@ -53,7 +54,12 @@ public:
         std::lock_guard lock(self.guard);
         wcsncpy_s(buffer[slot], label.c_str(), _TRUNCATE); return buffer[slot];
     }
-    const wchar_t* GetItemValueSampleText() const override { return L"~999999.99 CNY"; }
+    const wchar_t* GetItemValueSampleText() const override {
+        thread_local wchar_t buffer[16][64]{};
+        auto& self = const_cast<Item&>(*this);
+        std::lock_guard lock(self.guard);
+        wcsncpy_s(buffer[slot], widthSample.c_str(), _TRUNCATE); return buffer[slot];
+    }
     const wchar_t* GetItemValueText() const override {
         thread_local wchar_t buffer[16][128]{}; // Trivially destructible TLS only.
         auto& self = const_cast<Item&>(*this);
@@ -65,6 +71,7 @@ public:
         text = std::move(next);
     }
     void setLabel(std::wstring next) { std::lock_guard lock(guard); label = std::move(next); }
+    void setWidthSample(const wchar_t* next) { std::lock_guard lock(guard); widthSample = *next ? next : L"~999999.99 CNY"; }
     void setName(std::wstring next) { std::lock_guard lock(guard); name = next.empty() ? L"未配置" : std::move(next); }
 };
 
@@ -80,7 +87,23 @@ class Plugin final : public ITMPlugin {
     Handle process, mapping, snapshotMutex, showEvent, stopEvent;
     ULONGLONG nextAttempt{};
     ULONGLONG nextNamesRead{};
+    void readWidths() {
+        if (config.empty()) return;
+        Handle file;
+        file.value = CreateFileW((config / L"display-widths.bin").c_str(), GENERIC_READ,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (file.value == INVALID_HANDLE_VALUE) { file.value = nullptr; return; }
+        struct Widths { uint32_t version; wchar_t samples[16][64]; } widths{};
+        static_assert(sizeof(Widths) == 2052);
+        LARGE_INTEGER length{};
+        DWORD read{};
+        if (!GetFileSizeEx(file.value, &length) || length.QuadPart != sizeof(widths) ||
+            !ReadFile(file.value, &widths, sizeof(widths), &read, nullptr) || read != sizeof(widths) || widths.version != 0x31575044) return;
+        for (const auto& sample : widths.samples) if (sample[63] != L'\0') return;
+        for (size_t i = 0; i < items.size(); ++i) items[i].setWidthSample(widths.samples[i]);
+    }
     void readNames() {
+        readWidths();
         if (config.empty()) return;
         Handle file;
         file.value = CreateFileW((config / L"display-names.bin").c_str(), GENERIC_READ,

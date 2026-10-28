@@ -43,10 +43,12 @@ internal static class SettingsTests
             Text("SourceUrl", "https://example.com/balance"); Text("FieldPath_value", "#amount");
             Toggle("Process_value_currency", true); Toggle("Process_value_comma", true);
             Text("Label_1", "余额"); Text("Unit_1", " 元"); Text("Format_1", "0.00");
+            Text("WidthSample_1", "~999.99 元");
             var source = window.Draft.Sources.Single();
             Check(Extraction.Process("¥1,234.50", source.Fields.Single()) == "1234.50", "Currency processing");
             Check(window.Draft.Views.Single().Label == "余额", "View form edits");
             var config = Configuration.Parse(JsonSerializer.Serialize(window.Draft, Configuration.JsonOptions));
+            Check(config.Views[0].WidthSample == "~999.99 元", "Width sample form/JSON roundtrip");
             config.Sources[0].Headers["X-Test"] = "preserve";
             config.Sources[0].Fields[0].Steps.Add(new() { Kind = "regex", Pattern = "([0-9.]+)", Group = 1 });
             config.Metrics[0].Expression = "value * 2";
@@ -142,9 +144,13 @@ internal static class SettingsTests
             Check(discard.IsDisposed, "Discard close failed");
             var namesConfig = Presets.Demo();
             namesConfig.Views[0].Label = "账户余额";
+            namesConfig.Views[0].WidthSample = "~100%";
             namesConfig.Views.Add(new() { Slot = 2, Metric = "demo", Label = "账户余额" });
             DisplayNames.Write(directory, namesConfig);
             byte[] names = File.ReadAllBytes(Path.Combine(directory, "display-names.bin"));
+            byte[] widths = File.ReadAllBytes(Path.Combine(directory, "display-widths.bin"));
+            string WidthAt(int slot) => System.Text.Encoding.Unicode.GetString(widths, 4 + slot * 128, 128).TrimEnd('\0');
+            Check(widths.Length == 2052 && BitConverter.ToUInt32(widths) == 0x31575044 && WidthAt(0) == "~100%" && WidthAt(1) == "~999999.99 CNY" && WidthAt(2) == "", "Width cache layout, per-slot values and fallback");
             string NameAt(int slot) => System.Text.Encoding.Unicode.GetString(names, 4 + slot * 128, 128).TrimEnd('\0');
             Check(names.Length == 2052 && BitConverter.ToUInt32(names) == 0x314E5044 && NameAt(0) == "账户余额" && NameAt(1) == "账户余额", "Name cache format or duplicate names");
             namesConfig.Views[0].Label = ""; namesConfig.Views.RemoveAt(1);

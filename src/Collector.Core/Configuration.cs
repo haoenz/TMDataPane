@@ -50,6 +50,7 @@ public sealed class Configuration
         {
             if (view.Slot is < 1 or > 16 || !metricIds.Contains(view.Metric)) throw new FormatException("显示槽位或指标引用无效");
             if (view.Label.Length > 48 || view.Unit.Length > 20 || view.Format.Length > 32) throw new FormatException("显示格式过长");
+            if (view.WidthSample is null || view.WidthSample.Length > 63 || view.WidthSample.Any(char.IsControl)) throw new FormatException("宽度参考文本最多 63 个字符，不能包含换行或控制字符");
         }
     }
     private static void Unique(IEnumerable<string> values)
@@ -111,6 +112,8 @@ public sealed class Metric
 }
 public sealed class View
 {
+    public string WidthSample { get; set; } = "";
+    [JsonIgnore] public string EffectiveWidthSample => string.IsNullOrWhiteSpace(WidthSample) ? "~999999.99 CNY" : WidthSample;
     public int Slot { get; set; } = 1;
     public string Metric { get; set; } = "metric";
     public string Label { get; set; } = "Usage";

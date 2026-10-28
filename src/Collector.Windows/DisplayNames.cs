@@ -3,7 +3,7 @@ using System.Text;
 using DataPane.Core;
 namespace DataPane;
 
-// Derived names only; the native DLL can read these without starting collection or parsing credentials.
+// Derived display metadata only; readable without collection or credentials.
 internal static class DisplayNames
 {
     internal static void Write(string directory, Configuration config)
@@ -20,5 +20,12 @@ internal static class DisplayNames
         string path = Path.Combine(directory, "display-names.bin");
         File.WriteAllBytes(path + ".tmp", bytes);
         File.Move(path + ".tmp", path, true);
+        byte[] widths = new byte[4 + 16 * 64 * 2];
+        BinaryPrimitives.WriteUInt32LittleEndian(widths, 0x31575044); // DPW1
+        foreach (var view in config.Views)
+            Encoding.Unicode.GetBytes(view.EffectiveWidthSample.AsSpan(), widths.AsSpan(4 + (view.Slot - 1) * 128, 126));
+        string widthPath = Path.Combine(directory, "display-widths.bin");
+        File.WriteAllBytes(widthPath + ".tmp", widths);
+        File.Move(widthPath + ".tmp", widthPath, true);
     }
 }

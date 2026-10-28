@@ -10,12 +10,12 @@
 
 struct TestNameCache { uint32_t version{0x314E5044}; wchar_t labels[16][64]{}; };
 static_assert(sizeof(TestNameCache) == 2052);
-bool WriteNames(const std::filesystem::path& root, const TestNameCache& names) {
+bool WriteNames(const std::filesystem::path& root, const TestNameCache& names, const wchar_t* filename = L"display-names.bin") {
     const auto folder = root / L"DataPane";
     std::filesystem::create_directories(folder);
-    const auto temp = folder / L"display-names.bin.tmp";
+    const auto temp = folder / (std::wstring(filename) + L".tmp");
     { std::ofstream file(temp, std::ios::binary); file.write(reinterpret_cast<const char*>(&names), sizeof(names)); }
-    return MoveFileExW(temp.c_str(), (folder / L"display-names.bin").c_str(), MOVEFILE_REPLACE_EXISTING) != FALSE;
+    return MoveFileExW(temp.c_str(), (folder / filename).c_str(), MOVEFILE_REPLACE_EXISTING) != FALSE;
 }
 int TestNames(ITMPlugin* plugin, const std::filesystem::path& root) {
     TestNameCache names;
@@ -23,6 +23,23 @@ int TestNames(ITMPlugin* plugin, const std::filesystem::path& root) {
     if (!WriteNames(root, names)) return 10;
     plugin->OnExtenedInfo(ITMPlugin::EI_CONFIG_DIR, root.c_str());
     if (!plugin->GetItem(2) || plugin->GetItem(3) || plugin->GetItem(-1)) return 11;
+    if (std::wstring(plugin->GetItem(0)->GetItemValueSampleText()) != L"~999999.99 CNY") return 30;
+    TestNameCache widths;
+    widths.version = 0x31575044;
+    wcscpy_s(widths.labels[0], L"~999.99 元"); wcscpy_s(widths.labels[15], L"~100%");
+    if (!WriteNames(root, widths, L"display-widths.bin")) return 31;
+    plugin->OnExtenedInfo(ITMPlugin::EI_CONFIG_DIR, root.c_str());
+    const wchar_t* sample = plugin->GetItem(0)->GetItemValueSampleText();
+    if (std::wstring(plugin->GetItem(2)->GetItemValueSampleText()) != L"~100%" || std::wstring(sample) != L"~999.99 元" ||
+        std::wstring(plugin->GetItem(1)->GetItemValueSampleText()) != L"~999999.99 CNY") return 32;
+    widths.labels[0][63] = L'x';
+    if (!WriteNames(root, widths, L"display-widths.bin")) return 33;
+    plugin->OnExtenedInfo(ITMPlugin::EI_CONFIG_DIR, root.c_str());
+    if (std::wstring(plugin->GetItem(0)->GetItemValueSampleText()) != L"~999.99 元") return 34;
+    widths.labels[0][63] = L'\0'; widths.labels[0][0] = L'\0';
+    if (!WriteNames(root, widths, L"display-widths.bin")) return 35;
+    plugin->OnExtenedInfo(ITMPlugin::EI_CONFIG_DIR, root.c_str());
+    if (std::wstring(plugin->GetItem(0)->GetItemValueSampleText()) != L"~999999.99 CNY") return 36;
     if (std::wstring(plugin->GetItem(0)->GetItemName()) != L"余额" || std::wstring(plugin->GetItem(1)->GetItemName()) != L"余额") return 12;
     const int slots[] = {1, 5, 16};
     for (int i = 0; i < 3; ++i)

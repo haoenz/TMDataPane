@@ -178,9 +178,11 @@ internal sealed class SettingsWindow : Form
         if (currentFile != diskVersion) throw new FormatException("配置文件已被外部修改。请先点击“加载配置”读取文件，避免覆盖外部修改。");
         var next = Current();
         bool membershipChanged = !Configuration.Parse(applied).Views.Select(x => x.Slot).ToHashSet().SetEquals(next.Views.Select(x => x.Slot));
-        await apply(next); restartNeeded |= membershipChanged;
+        var oldWidths = Configuration.Parse(applied).Views.ToDictionary(x => x.Slot, x => x.EffectiveWidthSample);
+        bool widthChanged = next.Views.Any(x => !oldWidths.TryGetValue(x.Slot, out var old) || old != x.EffectiveWidthSample);
+        await apply(next); restartNeeded |= membershipChanged || widthChanged;
         draft = next; saved = applied = Serialize(next); diskVersion = File.Exists(configPath) ? File.ReadAllText(configPath) : null; Rebuild();
-        SetStatus("已保存配置。" + (!next.HasWork ? "当前未自动更新。" : "采集已启用。") + (restartNeeded ? "显示项已变更，请重启 TM 更新显示列表。" : ""));
+        SetStatus("已保存配置。" + (!next.HasWork ? "当前未自动更新。" : "采集已启用。") + (restartNeeded ? "显示项或宽度已变更，请重启 TM 更新布局。" : ""));
     }
     private async Task TestSelected()
     {
@@ -247,6 +249,8 @@ internal sealed class SettingsWindow : Form
                     TextField("显示名称", "Label_" + view.Slot, view.Label, v => { view.Label = v; var item = sources.Items.Cast<ListViewItem>().FirstOrDefault(x => (string)x.Tag! == source.Id); if (item is not null) item.Text = v; });
                     TextField("数字格式", "Format_" + view.Slot, view.Format, v => view.Format = v, "0.00 固定两位 / 0.## 最多两位");
                     TextField("单位后缀", "Unit_" + view.Slot, view.Unit, v => view.Unit = v, "例如 元 / %");
+                    TextField("宽度参考文本", "WidthSample_" + view.Slot, view.WidthSample, v => view.WidthSample = v, "留空使用 ~999999.99 CNY");
+                    Hint("按参考文本预留数值宽度，不改变实际内容。请包含单位及可能的 ~ 前缀，如 ~100% 或 ~999.99 CNY；保存后重启 TM 更新宽度。");
                 }
             }
             Button(form, "删除此数据源", () => {
