@@ -42,7 +42,7 @@ internal sealed class CollectorContext : ApplicationContext
         gatePath = Path.Combine(directory, "collection.enabled");
         ownership = new FileStream(Path.Combine(directory, "instance.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
         mapping = MemoryMappedFile.OpenExisting(ipc + "-snapshot", MemoryMappedFileRights.ReadWrite);
-        snapshot = mapping.CreateViewAccessor(0, 22544, MemoryMappedFileAccess.ReadWrite);
+        snapshot = mapping.CreateViewAccessor(0, 22608, MemoryMappedFileAccess.ReadWrite);
         snapshotMutex = Mutex.OpenExisting(ipc + "-mutex");
         show = EventWaitHandle.OpenExisting(ipc + "-show"); stop = EventWaitHandle.OpenExisting(ipc + "-stop");
         credentials = new(directory);
@@ -71,9 +71,10 @@ internal sealed class CollectorContext : ApplicationContext
         try { acquired = snapshotMutex.WaitOne(0); } catch (AbandonedMutexException) { acquired = true; }
         if (!acquired) return;
         try {
-            snapshot.Write(0, 2u); snapshot.Write(4, (uint)Environment.ProcessId); snapshot.Write(8, (ulong)Environment.TickCount64);
+            snapshot.Write(0, 3u); snapshot.Write(4, (uint)Environment.ProcessId); snapshot.Write(8, (ulong)Environment.TickCount64);
             for (int i = 0; i < 16; i++) {
-                int offset = 16 + i * 1408;
+                int offset = 16 + i * 1412;
+                snapshot.Write(offset + 1408, (uint)values[i].Alert);
                 WriteText(offset, 64, values[i].Label); WriteText(offset + 128, 128, values[i].Value); WriteText(offset + 384, 512, values[i].Status);
             }
         } finally { snapshotMutex.ReleaseMutex(); }

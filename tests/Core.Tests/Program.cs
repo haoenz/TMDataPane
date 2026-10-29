@@ -73,7 +73,19 @@ try {
     expected="fixture-second";
     await File.WriteAllTextAsync(temporary,"{\"tokens\":{\"access_token\":\"fixture-second\"}}");
     await fetch.FetchAsync(codexSource,CancellationToken.None);
+    var integration = new Configuration { Enabled = true };
+    Presets.Add(integration, "codex"); integration.Sources[0].AuthPath = temporary;
+    int publicCalls = 0;
+    await using (var runner = new Runner(integration,
+        new Fetcher(_ => "", handler: new FakeHandler(_ => new(HttpStatusCode.OK) { Content = new StringContent(codex) })),
+        new ResetMonitor(new FakeHandler(_ => { publicCalls++; return new(HttpStatusCode.ServiceUnavailable); })))) {
+        runner.Poll(); await Task.Delay(50);
+        var display = runner.Snapshot();
+        Check(publicCalls == 1 && display[0].Value == "0%" && display[1].Value == "70%", "Public API failure affected account usage or duplicated requests");
+        Check(display[0].Alert == ResetAlert.None && display[0].Status.Contains("重置状态暂不可用"), "Public failure state missing");
+    }
 } finally { File.Delete(temporary); }
+count += await ResetTests.Run();
 Console.WriteLine($"PASS: {count} core checks");
 
 sealed class FakeHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler

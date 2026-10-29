@@ -16,18 +16,20 @@ public sealed class Runner : IAsyncDisposable
     }
     private readonly Configuration config;
     private readonly Fetcher fetcher;
+    private readonly ResetMonitor resets;
     private readonly Dictionary<string, State> states;
     private readonly Dictionary<int, string> lastValues = [];
     private readonly CancellationTokenSource lifetime = new();
-    public Runner(Configuration configuration, Fetcher sourceFetcher)
+    public Runner(Configuration configuration, Fetcher sourceFetcher, ResetMonitor? resetMonitor = null)
     {
-        config = configuration; fetcher = sourceFetcher;
+        config = configuration; fetcher = sourceFetcher; resets = resetMonitor ?? new();
         states = config.Sources.ToDictionary(x => x.Id, x => new State(x));
     }
     // Invoked on the collector UI thread; continuations return to that same context.
     public void Poll(bool force = false)
     {
         if (!config.Enabled || lifetime.IsCancellationRequested) return;
+        if (config.Sources.Any(x => x.Enabled && x.Kind == "codex" && x.ResetReminder)) resets.Poll();
         foreach (var state in states.Values)
             if (state.Source.Enabled && (state.Pending is null || state.Pending.IsCompleted) && (force || Environment.TickCount64 >= state.Next))
             {
@@ -73,7 +75,9 @@ public sealed class Runner : IAsyncDisposable
                 }
                 catch (Exception) { status = "计算失败；字段缺失、非法数字、除零或表达式/格式错误"; value = lastValues.TryGetValue(view.Slot, out var previous) ? "~" + previous : "--"; }
             }
-            result[view.Slot - 1] = new(view.Label, value, status);
+            var notice = config.Enabled && state.Source.Enabled && state.Source.Kind == "codex" && state.Source.ResetReminder
+                ? resets.Notice(state.Source) : new ResetNotice(ResetAlert.None, "");
+            result[view.Slot - 1] = new(view.Label, value, notice.Text.Length > 0 ? notice.Text + "；" + status : status, notice.Alert);
         }
         return result;
     }
@@ -81,6 +85,7 @@ public sealed class Runner : IAsyncDisposable
     {
         await lifetime.CancelAsync();
         await Task.WhenAll(states.Values.Select(x => x.Pending ?? Task.CompletedTask));
+        await resets.DisposeAsync();
         lifetime.Dispose(); fetcher.Dispose();
     }
 }

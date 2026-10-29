@@ -35,6 +35,7 @@ public sealed class Configuration
         {
             if (!new[] { "demo", "codex", "deepseek", "http_json", "http_html", "browser_dom" }.Contains(source.Kind)) throw new FormatException("未知数据源类型");
             if (source.IntervalSeconds < 5 || source.IntervalSeconds > 86400 || source.TimeoutSeconds < 1 || source.TimeoutSeconds > 120) throw new FormatException("刷新间隔须为 5–86400 秒，超时须为 1–120 秒");
+            if (source.ResetLeadMinutes < 1 || source.ResetLeadMinutes > 10080) throw new FormatException("重置提醒提前时间须为 1–10080 分钟");
             if (source.Kind.StartsWith("http_") || source.Kind == "browser_dom") RequireUrl(source.Url);
             if (source.Headers is null || source.SecretHeaders is null || source.Fields is null) throw new FormatException("请求与提取字段不能为 null");
             if (source.Headers.Keys.Any(IsSensitiveName)) throw new FormatException("认证头应使用 secretHeaders 引用加密凭据");
@@ -80,6 +81,9 @@ public sealed class Source
     public string? Body { get; set; }
     public int IntervalSeconds { get; set; } = 60;
     public int TimeoutSeconds { get; set; } = 15;
+    public bool ResetReminder { get; set; } = true;
+    public bool ResetPredictions { get; set; } = true;
+    public int ResetLeadMinutes { get; set; } = 360;
     public string AuthPath { get; set; } = "";
     public string Credential { get; set; } = "";
     public string Currency { get; set; } = "CNY";
@@ -125,4 +129,4 @@ public sealed class CollectionFailure(string state, string message) : Exception(
     public string State { get; } = state;
 }
 public sealed record Collected(Dictionary<string, string> Fields, string Preview, string Note = "", Dictionary<string, string>? RawFields = null);
-public sealed record DisplayValue(string Label, string Value, string Status);
+public sealed record DisplayValue(string Label, string Value, string Status, ResetAlert Alert = ResetAlert.None);

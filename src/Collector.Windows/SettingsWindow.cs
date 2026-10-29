@@ -215,6 +215,13 @@ internal sealed class SettingsWindow : Form
                 string auth = source.AuthPath.Length > 0 ? source.AuthPath : Path.Combine(Environment.GetEnvironmentVariable("CODEX_HOME") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".codex"), "auth.json");
                 Hint(File.Exists(auth) ? "已找到本机凭据文件；请测试确认登录有效。" : "未找到本机凭据文件。请先登录 Codex，或指定凭据文件路径。");
                 TextField("凭据文件路径", "AuthPath", source.AuthPath, v => source.AuthPath = v, "留空自动查找");
+                Toggle("公共重置背景提醒", "ResetReminder", source.ResetReminder, v => source.ResetReminder = v);
+                Toggle("包含 AI 预测提醒", "ResetPredictions", source.ResetPredictions, v => source.ResetPredictions = v);
+                Number("提前提醒（分钟）", "ResetLeadMinutes", source.ResetLeadMinutes, 1, 10080, v => source.ResetLeadMinutes = v);
+                Hint("默认提前 360 分钟（6 小时）显示橙红色；预测为黄/橙黄色。公共事件不代表个人额度已经恢复。");
+                var credit = new LinkLabel { Text = "数据来源：Codex Resets", AutoSize = true };
+                credit.LinkClicked += (_, _) => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://codex-resets.com") { UseShellExecute = true });
+                form.Controls.Add(credit);
             }
             if (source.Kind == "deepseek") {
                 TextField("币种（例如 CNY / USD）", "Currency", source.Currency, v => source.Currency = v);

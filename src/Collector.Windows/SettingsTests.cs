@@ -36,6 +36,16 @@ internal static class SettingsTests
             foreach (var kind in new[] { "codex", "deepseek", "http_json", "http_html", "browser_dom", "demo" }) {
                 window.AddSource(kind);
                 Check(window.Draft.Sources.Last().Kind == kind && ((ListView)Find("SourceList")).SelectedItems.Count == 1, "Add/select " + kind);
+                if (kind == "codex") {
+                    Check(((NumericUpDown)Find("ResetLeadMinutes")).Value == 360, "Default six-hour reminder");
+                    Toggle("ResetPredictions", false); Toggle("ResetReminder", false);
+                    ((NumericUpDown)Find("ResetLeadMinutes")).Value = 120;
+                    var edited = Configuration.Parse(JsonSerializer.Serialize(window.Draft, Configuration.JsonOptions));
+                    Check(!edited.Sources.Last().ResetReminder && !edited.Sources.Last().ResetPredictions && edited.Sources.Last().ResetLeadMinutes == 120, "Reminder controls/JSON roundtrip");
+                    DisplayNames.Write(directory, edited);
+                    var render = File.ReadAllBytes(Path.Combine(directory, "display-render.bin"));
+                    Check(render.Length == 8 && BitConverter.ToUInt32(render, 0) == 0x31525044 && BitConverter.ToUInt32(render, 4) == 3, "Codex-only render metadata");
+                }
             }
             Check(saves == 0 && !File.Exists(path) && window.IsDirty, "Adding wrote to disk");
             Click("加载配置"); Check(window.Draft.Sources.Count == 0 && !window.IsDirty, "Restore absent file");

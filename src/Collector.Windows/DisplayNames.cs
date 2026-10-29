@@ -25,6 +25,16 @@ internal static class DisplayNames
         foreach (var view in config.Views)
             Encoding.Unicode.GetBytes(view.EffectiveWidthSample.AsSpan(), widths.AsSpan(4 + (view.Slot - 1) * 128, 126));
         string widthPath = Path.Combine(directory, "display-widths.bin");
+        byte[] render = new byte[8];
+        BinaryPrimitives.WriteUInt32LittleEndian(render, 0x31525044); // DPR1
+        uint mask = 0;
+        foreach (var view in config.Views) {
+            var metric = config.Metrics.First(x => x.Id == view.Metric);
+            if (config.Sources.First(x => x.Id == metric.Source).Kind == "codex") mask |= 1u << (view.Slot - 1);
+        }
+        BinaryPrimitives.WriteUInt32LittleEndian(render.AsSpan(4), mask);
+        string renderPath = Path.Combine(directory, "display-render.bin");
+        File.WriteAllBytes(renderPath + ".tmp", render); File.Move(renderPath + ".tmp", renderPath, true);
         File.WriteAllBytes(widthPath + ".tmp", widths);
         File.Move(widthPath + ".tmp", widthPath, true);
     }

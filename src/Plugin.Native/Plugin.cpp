@@ -17,6 +17,7 @@ struct Display {
     wchar_t label[64];
     wchar_t value[128];
     wchar_t status[512];
+    uint32_t alert;
 };
 struct Snapshot {
     uint32_t version;
@@ -24,7 +25,8 @@ struct Snapshot {
     uint64_t heartbeat;
     Display items[16];
 };
-static_assert(sizeof(Snapshot) == 22544);
+static_assert(sizeof(Display) == 1412);
+static_assert(sizeof(Snapshot) == 22608);
 
 struct Handle {
     HANDLE value{};
@@ -41,6 +43,54 @@ public:
     size_t slot{};
     std::wstring name, id, text{L"Stopped"}, label;
     std::wstring widthSample{L"~999999.99 CNY"};
+    bool customDraw{};
+    uint32_t alert{};
+    COLORREF labelColor{CLR_INVALID}, valueColor{CLR_INVALID};
+    bool taskbar{}, rightAlign{};
+    bool IsCustomDraw() const override { return customDraw; }
+    int GetItemWidth() const override { return 160; }
+    int GetItemWidthEx(void* context) const override {
+        auto& self = const_cast<Item&>(*this);
+        std::lock_guard lock(self.guard);
+        const auto dc = static_cast<HDC>(context);
+        SIZE a{}, b{};
+        const auto title = name + L": ";
+        GetTextExtentPoint32W(dc, title.c_str(), static_cast<int>(title.size()), &a);
+        GetTextExtentPoint32W(dc, widthSample.c_str(), static_cast<int>(widthSample.size()), &b);
+        return a.cx + b.cx + MulDiv(8, GetDeviceCaps(dc, LOGPIXELSX), 96);
+    }
+    void DrawItem(void* context, int x, int y, int w, int h, bool dark) override {
+        std::lock_guard lock(guard);
+        const auto dc = static_cast<HDC>(context);
+        int saved = SaveDC(dc);
+        if (!saved) return;
+        IntersectClipRect(dc, x, y, x + w, y + h);
+        RECT area{x, y, x + w, y + h};
+        COLORREF bg = CLR_INVALID;
+        switch (alert) {
+        case 1: bg = dark ? RGB(91, 77, 24) : RGB(255, 243, 176); break;
+        case 2: bg = dark ? RGB(116, 75, 18) : RGB(255, 203, 105); break;
+        case 3: bg = dark ? RGB(153, 51, 25) : RGB(255, 112, 67); break;
+        case 4: bg = dark ? RGB(28, 91, 58) : RGB(183, 232, 196); break;
+        }
+        if (bg != CLR_INVALID) {
+            HBRUSH brush = CreateSolidBrush(bg); FillRect(dc, &area, brush); DeleteObject(brush);
+        }
+        const auto normal = GetTextColor(dc);
+        auto color = [&](COLORREF configured) { return bg != CLR_INVALID ? (dark ? RGB(255,255,255) : RGB(25,25,25)) : (configured == CLR_INVALID ? normal : configured); };
+        SetBkMode(dc, TRANSPARENT);
+        const int pad = MulDiv(4, GetDeviceCaps(dc, LOGPIXELSX), 96);
+        area.left += pad; area.right -= pad;
+        auto title = (label.empty() ? name : label) + L": ";
+        SIZE size{}; GetTextExtentPoint32W(dc, title.c_str(), static_cast<int>(title.size()), &size);
+        SetTextColor(dc, color(labelColor));
+        DrawTextW(dc, title.c_str(), -1, &area, DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+        area.left += size.cx;
+        SetTextColor(dc, color(valueColor));
+        DrawTextW(dc, text.c_str(), -1, &area, DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX | DT_END_ELLIPSIS | (taskbar && rightAlign ? DT_RIGHT : DT_LEFT));
+        RestoreDC(dc, saved);
+    }
+    void setAlert(uint32_t next) { std::lock_guard lock(guard); alert = next <= 4 ? next : 0; }
     const wchar_t* GetItemName() const override {
         thread_local wchar_t buffer[16][64]{};
         auto& self = const_cast<Item&>(*this);
@@ -83,7 +133,7 @@ class Plugin final : public ITMPlugin {
     std::mutex guard;
     std::filesystem::path config;
     std::wstring ipc, tooltip{L"Open DataPane options to configure sources."};
-    void setAll(const wchar_t* text) { for (auto& item : items) item.set(text); }
+    void setAll(const wchar_t* text) { for (auto& item : items) { item.set(text); item.setAlert(0); } }
     Handle process, mapping, snapshotMutex, showEvent, stopEvent;
     ULONGLONG nextAttempt{};
     ULONGLONG nextNamesRead{};
@@ -105,6 +155,17 @@ class Plugin final : public ITMPlugin {
     void readNames() {
         readWidths();
         if (config.empty()) return;
+        if (!enumerationFrozen) {
+            Handle render;
+            render.value = CreateFileW((config / L"display-render.bin").c_str(), GENERIC_READ,
+                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+            if (render.value == INVALID_HANDLE_VALUE) render.value = nullptr;
+            struct Render { uint32_t version, mask; } info{};
+            DWORD read{}; LARGE_INTEGER length{};
+            if (render.value && GetFileSizeEx(render.value, &length) && length.QuadPart == sizeof(info) &&
+                ReadFile(render.value, &info, sizeof(info), &read, nullptr) && read == sizeof(info) && info.version == 0x31525044)
+                for (size_t i = 0; i < items.size(); ++i) items[i].customDraw = (info.mask & (1u << i)) != 0;
+        }
         Handle file;
         file.value = CreateFileW((config / L"display-names.bin").c_str(), GENERIC_READ,
             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
@@ -202,8 +263,19 @@ public:
         }
     }
     void OnExtenedInfo(ExtendedInfoIndex index, const wchar_t* data) override {
-        if (index != EI_CONFIG_DIR || !data) return;
+        if (!data) return;
         std::lock_guard lock(guard);
+        if (index != EI_CONFIG_DIR) {
+            const auto value = wcstoul(data, nullptr, 10);
+            for (auto& item : items) {
+                std::lock_guard itemLock(item.guard);
+                if (index == EI_LABEL_TEXT_COLOR) item.labelColor = value;
+                if (index == EI_VALUE_TEXT_COLOR) item.valueColor = value;
+                if (index == EI_DRAW_TASKBAR_WND) item.taskbar = value != 0;
+                if (index == EI_TASKBAR_WND_VALUE_RIGHT_ALIGN) item.rightAlign = value != 0;
+            }
+            return;
+        }
         config = std::filesystem::path(data) / L"DataPane";
         readNames();
         // Directory creation is done by the collector only when the user opens settings.
@@ -225,7 +297,7 @@ public:
             auto view = MapViewOfFile(mapping.value, FILE_MAP_READ, 0, 0, sizeof(copy));
             if (view) { memcpy(&copy, view, sizeof(copy)); UnmapViewOfFile(view); }
             ReleaseMutex(snapshotMutex.value);
-            if (!view || acquired == WAIT_ABANDONED || copy.version != 2) return;
+            if (!view || acquired == WAIT_ABANDONED || copy.version != 3) { setAll(L"Snapshot unavailable"); return; }
             const bool stale = now < copy.heartbeat || now - copy.heartbeat > 5000;
             tooltip.clear();
             for (size_t i = 0; i < items.size(); ++i) {
@@ -233,6 +305,7 @@ public:
                 entry.label[63] = 0; entry.value[127] = 0; entry.status[511] = 0;
                 items[i].setLabel(entry.label);
                 items[i].set(std::wstring(stale ? L"Stale: " : L"") + entry.value);
+                items[i].setAlert(stale ? 0 : entry.alert);
                 if (*entry.label) tooltip += std::wstring(entry.label) + L": " + entry.status + L"\n";
             }
         } catch (...) { setAll(L"Plugin error"); }
